@@ -443,8 +443,9 @@ $('#m-card').onclick = async ()=>{
     if(!url) throw new Error('sem url');
     location.href = url;
   }catch(err){
-    toast('Cartão indisponível agora. Use o Pix 🙏');
     btn.textContent = '💳 Prefere cartão? Pagar em até 12x'; btn.disabled = false;
+    const msg = `Oi João e Larissa! 💛 Quero dar o presente *${presenteAtual}* (${brl(valorAtual)}) no cartão. Podem me mandar o link de pagamento?`;
+    location.href = `https://wa.me/${CONFIG.whatsapp}?text=${encodeURIComponent(msg)}`;
   }
 };
 $('#m-copy').onclick = ()=> copiar(codigoAtual, 'Código Pix copiado! ✅');
