@@ -234,7 +234,8 @@
     <div class="em" id="m-em"></div>
     <h3 id="m-nome"></h3>
     <div class="pr" id="m-preco"></div>
-    <div class="valorlivre" id="m-livre" hidden><span>R$</span><input id="m-valor" inputmode="decimal" placeholder="0,00"></div>
+    <div class="lbl" style="text-align:center;margin-top:10px">Valor do presente (pode ajustar)</div>
+    <div class="valorlivre" id="m-livre"><span>R$</span><input id="m-valor" inputmode="decimal" placeholder="0,00"></div>
     <div class="qr" id="m-qr"></div>
     <div class="lbl" style="text-align:center;margin-bottom:6px">Pix copia e cola</div>
     <div class="code" id="m-code"></div>
@@ -368,6 +369,7 @@ renderTabs(); renderGifts();
 
 /* ---------- Modal ---------- */
 let codigoAtual = '';
+let presenteAtual = '';
 function setPix(valor, nomePresente){
   codigoAtual = pixPayload(valor);
   $('#m-code').textContent = codigoAtual;
@@ -382,16 +384,17 @@ function openGift(i){
     $('#m-em').textContent = '💌';
     $('#m-nome').textContent = 'Presente com valor livre';
     $('#m-preco').textContent = '';
-    $('#m-livre').hidden = false;
+    presenteAtual = 'valor livre';
     $('#m-valor').value = '';
-    setPix(0, 'valor livre');
+    setPix(0, presenteAtual);
   } else {
     const p = PRESENTES[i];
     $('#m-em').textContent = p.e;
     $('#m-nome').textContent = p.n;
-    $('#m-preco').textContent = brl(p.v);
-    $('#m-livre').hidden = true;
-    setPix(p.v, p.n);
+    $('#m-preco').textContent = '';
+    presenteAtual = p.n;
+    $('#m-valor').value = p.v.toFixed(2).replace('.',',');
+    setPix(p.v, presenteAtual);
   }
   $('#ov').classList.add('open');
   document.body.style.overflow = 'hidden';
@@ -401,7 +404,7 @@ $('#x').onclick = closeGift;
 $('#ov').addEventListener('click', e=>{ if(e.target.id==='ov') closeGift(); });
 $('#m-valor').addEventListener('input', e=>{
   const v = parseFloat(e.target.value.replace(/\./g,'').replace(',','.')) || 0;
-  setPix(v, 'valor livre');
+  setPix(v, presenteAtual);
 });
 
 function toast(t){ const el=$('#toast'); el.textContent=t; el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),2200); }
