@@ -21,6 +21,7 @@
     --creme:#fbf9f5; --texto:#3d4a54; --suave:#7b8a95;
   }
   *{box-sizing:border-box;margin:0;padding:0}
+  [hidden]{display:none!important}
   html{scroll-behavior:smooth}
   body{font-family:'Montserrat',sans-serif;color:var(--texto);background:var(--creme);line-height:1.6;-webkit-font-smoothing:antialiased}
   .wrap{max-width:560px;margin:0 auto;padding:0 22px}
@@ -83,6 +84,23 @@
   .gift .nm{font-size:.82rem;font-weight:500;line-height:1.35;flex:1}
   .gift .pr{font-family:'Cormorant Garamond',serif;font-size:1.3rem;font-weight:600;color:var(--ouro);margin:8px 0 10px}
   .gift .go{font-size:.72rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#fff;background:var(--ouro);border-radius:999px;padding:7px 0}
+  .gift{position:relative}
+  .add{position:absolute;top:8px;right:8px;width:32px;height:32px;border-radius:50%;border:1.5px solid var(--ouro-claro);background:#fff;color:var(--ouro);font-size:1.1rem;font-weight:600;line-height:1;cursor:pointer;display:grid;place-items:center}
+  .add.on{background:var(--ouro);border-color:var(--ouro);color:#fff}
+  .gift.sel{border-color:var(--ouro);box-shadow:0 0 0 2px var(--ouro-claro)}
+  .cartbar{position:fixed;left:12px;right:12px;bottom:14px;max-width:536px;margin:0 auto;background:var(--texto);color:#fff;border-radius:18px;padding:12px 12px 12px 18px;display:flex;align-items:center;gap:10px;z-index:40;box-shadow:0 10px 30px rgba(0,0,0,.25);transform:translateY(140%);transition:transform .25s}
+  .cartbar.show{transform:none}
+  .cartbar .info{flex:1;line-height:1.25}
+  .cartbar small{display:block;font-size:.72rem;opacity:.75}
+  .cartbar b{font-family:'Cormorant Garamond',serif;font-size:1.3rem}
+  .cartbar .btn{padding:11px 16px}
+  .lista{background:#fff;border:1px solid #ece4d6;border-radius:14px;margin:12px 0 4px;padding:4px 12px}
+  .lista div{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid #f1ece3;font-size:.85rem}
+  .lista div:last-child{border-bottom:none}
+  .lista span.n{flex:1}
+  .lista b{color:var(--ouro);font-family:'Cormorant Garamond',serif;font-size:1.05rem}
+  .lista button{border:none;background:none;color:var(--suave);font-size:1.1rem;cursor:pointer;padding:0 4px}
+  body.temcarrinho footer{padding-bottom:110px}
   .livre{grid-column:1/-1;background:linear-gradient(135deg,#fff, #f6efe3)}
 
   /* RSVP */
@@ -234,6 +252,8 @@
     <div class="em" id="m-em"></div>
     <h3 id="m-nome"></h3>
     <div class="pr" id="m-preco"></div>
+    <div class="lista" id="m-lista" hidden></div>
+    <button class="btn btn-linha full mt" id="m-addcart" hidden></button>
     <div class="lbl" style="text-align:center;margin-top:10px">Valor do presente (pode ajustar)</div>
     <div class="valorlivre" id="m-livre"><span>R$</span><input id="m-valor" inputmode="decimal" placeholder="0,00"></div>
     <div class="qr" id="m-qr"></div>
@@ -249,6 +269,10 @@
     <a class="btn btn-wa full mt" id="m-wa" target="_blank" rel="noopener" href="#">💬 Avisar os noivos que presenteei</a>
     <p class="titular">Chave Pix (celular): (27) 99753-0311 · <a href="#" id="m-copykey" style="color:var(--ouro)">copiar chave</a></p>
   </div>
+</div>
+<div class="cartbar" id="cartbar">
+  <div class="info"><small id="cb-qtd">0 presentes</small><b id="cb-total">R$ 0,00</b></div>
+  <button class="btn btn-ouro" id="cb-go">🎁 Presentear</button>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -345,13 +369,31 @@ function pixPayload(valor, presente){
 /* ---------- Lista ---------- */
 const cats = ['Todos', ...new Set(PRESENTES.map(p=>p.c))];
 let catAtual = 'Todos';
+const carrinho = new Set();
+let modo = 'um'; // 'um' | 'livre' | 'carrinho'
+let idxAtual = null;
+function totalCarrinho(){ return [...carrinho].reduce((s,i)=>s+PRESENTES[i].v,0); }
+function toggleCarrinho(i){
+  i = Number(i);
+  if(carrinho.has(i)){ carrinho.delete(i); toast('Removido do carrinho'); }
+  else { carrinho.add(i); toast('Adicionado ao carrinho 🛒'); }
+  renderGifts(); renderCartbar();
+}
+function renderCartbar(){
+  const n = carrinho.size;
+  $('#cartbar').classList.toggle('show', n>0);
+  document.body.classList.toggle('temcarrinho', n>0);
+  $('#cb-qtd').textContent = n + (n===1?' presente no carrinho':' presentes no carrinho');
+  $('#cb-total').textContent = brl(totalCarrinho());
+}
 function renderTabs(){
   $('#tabs').innerHTML = cats.map(c=>`<button class="tab ${c===catAtual?'on':''}" data-c="${c}">${c}</button>`).join('');
 }
 function renderGifts(){
   const list = PRESENTES.map((p,i)=>({...p,i})).filter(p=>catAtual==='Todos'||p.c===catAtual).sort((a,b)=>a.v-b.v);
   $('#gifts').innerHTML = list.map(p=>`
-    <div class="gift" data-i="${p.i}">
+    <div class="gift ${carrinho.has(p.i)?'sel':''}" data-i="${p.i}">
+      <button class="add ${carrinho.has(p.i)?'on':''}" data-add="${p.i}" aria-label="Adicionar ao carrinho">${carrinho.has(p.i)?'✓':'+'}</button>
       <div class="em">${p.e}</div>
       <div class="nm">${p.n}</div>
       <div class="pr">${brl(p.v)}</div>
@@ -366,8 +408,11 @@ function renderGifts(){
 $('#tabs').addEventListener('click', e=>{
   const b = e.target.closest('.tab'); if(!b) return;
   catAtual = b.dataset.c; renderTabs(); renderGifts();
+setTimeout(renderCartbar,0);
 });
 $('#gifts').addEventListener('click', e=>{
+  const a = e.target.closest('.add');
+  if(a){ e.stopPropagation(); toggleCarrinho(a.dataset.add); return; }
   const g = e.target.closest('.gift'); if(!g) return;
   openGift(g.dataset.i);
 });
@@ -379,15 +424,63 @@ let presenteAtual = '';
 let valorAtual = 0;
 function setPix(valor, nomePresente){
   valorAtual = valor || 0;
-  codigoAtual = pixPayload(valor, nomePresente);
+  const nomePix = modo==='carrinho' ? `${carrinho.size} presentes` : nomePresente;
+  codigoAtual = pixPayload(valor, nomePix);
   $('#m-code').textContent = codigoAtual;
   const box = $('#m-qr'); box.innerHTML = '';
   try{ new QRCode(box,{text:codigoAtual,width:200,height:200,correctLevel:QRCode.CorrectLevel.M}); }
   catch(err){ box.innerHTML = '<p class="det" style="width:200px;text-align:center">Use o código copia e cola abaixo.</p>'; }
-  const msg = `Oi João e Larissa! 💛 Acabei de enviar um Pix de presente${nomePresente?`: *${nomePresente}*`:''}${valor?` (${brl(valor)})`:''}. Felicidades ao casal! — `;
+  const msg = modo==='carrinho'
+    ? `Oi João e Larissa! 💛 Acabei de enviar um Pix de presente (${brl(valor)}) com:\n${[...carrinho].map(i=>'• '+PRESENTES[i].n).join('\n')}\n\nFelicidades ao casal! — `
+    : `Oi João e Larissa! 💛 Acabei de enviar um Pix de presente${nomePresente?`: *${nomePresente}*`:''}${valor?` (${brl(valor)})`:''}. Felicidades ao casal! — `;
   $('#m-wa').href = `https://wa.me/${CONFIG.whatsapp}?text=${encodeURIComponent(msg)}`;
 }
+function abrirModal(){
+  $('#ov').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function renderAddBtn(){
+  const b = $('#m-addcart');
+  if(modo!=='um'){ b.hidden = true; return; }
+  b.hidden = false;
+  b.textContent = carrinho.has(idxAtual) ? '✓ No carrinho (toque para remover)' : '🛒 Adicionar ao carrinho e escolher mais';
+}
+function renderLista(){
+  const l = $('#m-lista');
+  if(modo!=='carrinho'){ l.hidden = true; return; }
+  l.hidden = false;
+  l.innerHTML = [...carrinho].map(i=>`<div><span>${PRESENTES[i].e}</span><span class="n">${PRESENTES[i].n}</span><b>${brl(PRESENTES[i].v)}</b><button data-rm="${i}" aria-label="Remover">×</button></div>`).join('');
+}
+function openCarrinho(){
+  if(!carrinho.size) return;
+  modo = 'carrinho';
+  $('#m-em').textContent = '🎁';
+  $('#m-nome').textContent = 'Seus presentes';
+  $('#m-preco').textContent = '';
+  presenteAtual = [...carrinho].map(i=>PRESENTES[i].n).join(', ');
+  const t = totalCarrinho();
+  $('#m-valor').value = t.toFixed(2).replace('.',',');
+  renderLista(); renderAddBtn();
+  setPix(t, presenteAtual);
+  abrirModal();
+}
+$('#cb-go').onclick = openCarrinho;
+$('#m-lista').addEventListener('click', e=>{
+  const b = e.target.closest('[data-rm]'); if(!b) return;
+  carrinho.delete(Number(b.dataset.rm));
+  renderGifts(); renderCartbar();
+  if(!carrinho.size){ closeGift(); return; }
+  openCarrinho();
+});
+$('#m-addcart').onclick = ()=>{
+  toggleCarrinho(idxAtual);
+  renderAddBtn();
+  if(carrinho.has(idxAtual)) closeGift();
+};
 function openGift(i){
+  modo = i==='livre' ? 'livre' : 'um';
+  idxAtual = i==='livre' ? null : Number(i);
+  renderLista();
   if(i === 'livre'){
     $('#m-em').textContent = '💌';
     $('#m-nome').textContent = 'Presente com valor livre';
@@ -404,8 +497,8 @@ function openGift(i){
     $('#m-valor').value = p.v.toFixed(2).replace('.',',');
     setPix(p.v, presenteAtual);
   }
-  $('#ov').classList.add('open');
-  document.body.style.overflow = 'hidden';
+  renderAddBtn();
+  abrirModal();
 }
 function closeGift(){ $('#ov').classList.remove('open'); document.body.style.overflow=''; }
 $('#x').onclick = closeGift;
