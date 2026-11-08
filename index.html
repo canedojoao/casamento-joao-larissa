@@ -240,6 +240,7 @@
     <div class="lbl" style="text-align:center;margin-bottom:6px">Pix copia e cola</div>
     <div class="code" id="m-code"></div>
     <button class="btn btn-ouro full mt" id="m-copy">📋 Copiar código Pix</button>
+    <button class="btn btn-azul full mt" id="m-card">💳 Prefere cartão? Pagar em até 12x</button>
     <ol class="steps">
       <li>Abra o app do seu banco e vá em <b>Pix → Pix Copia e Cola</b> (ou leia o QR Code).</li>
       <li>Cole o código: o valor já vem preenchido.</li>
@@ -259,7 +260,9 @@ const CONFIG = {
   pixChave: '+5527997530311',
   pixNome: 'JOAO GABRIEL C CARVALHO', // máx. 25 caracteres, sem acento
   pixCidade: 'SERRA',
-  whatsapp: '5527997530311'
+  whatsapp: '5527997530311',
+  infiniteTag: 'joao_canedo',
+  site: 'https://canedojoao.github.io/casamento-joao-larissa/'
 };
 
 const PRESENTES = [
@@ -373,7 +376,9 @@ renderTabs(); renderGifts();
 /* ---------- Modal ---------- */
 let codigoAtual = '';
 let presenteAtual = '';
+let valorAtual = 0;
 function setPix(valor, nomePresente){
+  valorAtual = valor || 0;
   codigoAtual = pixPayload(valor, nomePresente);
   $('#m-code').textContent = codigoAtual;
   const box = $('#m-qr'); box.innerHTML = '';
@@ -419,6 +424,29 @@ async function copiar(txt, ok){
     toast('Código selecionado, é só copiar');
   }
 }
+$('#m-card').onclick = async ()=>{
+  const btn = $('#m-card');
+  if(!valorAtual || valorAtual < 1){ toast('Informe o valor do presente'); return; }
+  btn.textContent = 'Abrindo pagamento…'; btn.disabled = true;
+  try{
+    const r = await fetch('https://api.checkout.infinitepay.io/links',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        handle: CONFIG.infiniteTag,
+        redirect_url: CONFIG.site,
+        order_nsu: 'presente-' + Date.now(),
+        items:[{quantity:1, price: Math.round(valorAtual*100), description: 'Presente: ' + presenteAtual}]
+      })
+    });
+    const d = await r.json();
+    const url = d.url || d.checkout_url || (d.data && (d.data.url || d.data.checkout_url));
+    if(!url) throw new Error('sem url');
+    location.href = url;
+  }catch(err){
+    toast('Cartão indisponível agora. Use o Pix 🙏');
+    btn.textContent = '💳 Prefere cartão? Pagar em até 12x'; btn.disabled = false;
+  }
+};
 $('#m-copy').onclick = ()=> copiar(codigoAtual, 'Código Pix copiado! ✅');
 $('#m-copykey').onclick = e=>{ e.preventDefault(); copiar('27997530311','Chave Pix copiada! ✅'); };
 
