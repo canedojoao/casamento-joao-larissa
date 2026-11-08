@@ -326,13 +326,16 @@ function crc16(str){
   }
   return crc.toString(16).toUpperCase().padStart(4,'0');
 }
-function pixPayload(valor){
+const semAcento = s => (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+function pixPayload(valor, presente){
+  const info = presente ? semAcento('Presente: '+presente).replace(/[^\w :,.-]/g,'').slice(0,50).trim() : '';
+  const txid = presente ? (semAcento(presente).toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,25) || '***') : '***';
   let p = tlv('00','01')
-    + tlv('26', tlv('00','br.gov.bcb.pix') + tlv('01', CONFIG.pixChave))
+    + tlv('26', tlv('00','br.gov.bcb.pix') + tlv('01', CONFIG.pixChave) + (info ? tlv('02', info) : ''))
     + tlv('52','0000') + tlv('53','986');
   if(valor && valor > 0) p += tlv('54', valor.toFixed(2));
   p += tlv('58','BR') + tlv('59', CONFIG.pixNome) + tlv('60', CONFIG.pixCidade)
-    + tlv('62', tlv('05','***')) + '6304';
+    + tlv('62', tlv('05', txid)) + '6304';
   return p + crc16(p);
 }
 
@@ -371,7 +374,7 @@ renderTabs(); renderGifts();
 let codigoAtual = '';
 let presenteAtual = '';
 function setPix(valor, nomePresente){
-  codigoAtual = pixPayload(valor);
+  codigoAtual = pixPayload(valor, nomePresente);
   $('#m-code').textContent = codigoAtual;
   const box = $('#m-qr'); box.innerHTML = '';
   try{ new QRCode(box,{text:codigoAtual,width:200,height:200,correctLevel:QRCode.CorrectLevel.M}); }
